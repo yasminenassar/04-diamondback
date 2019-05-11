@@ -314,7 +314,7 @@ isAnf (Prim1 _ e _)    = isImm e
 isAnf (Prim2 _ e e' _) = isImm e && isImm e'
 isAnf (If c t e _)     = isImm c && isAnf t && isAnf e
 isAnf (Let _ e e' _)   = isAnf e && isAnf e'
-isAnf (App _ es _)     = all isAnf es
+isAnf (App _ es _)     = all isImm es
 
 {-@ measure isImm @-}
 isImm :: Expr a -> Bool
