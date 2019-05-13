@@ -64,7 +64,7 @@ duplicateFunErrors
 --    and the tag bit.
 
 maxInt :: Integer
-maxInt = 1073741824
+maxInt = 1073741823
 
 --------------------------------------------------------------------------------
 -- | Error Constructors: Use these functions to construct `UserError` values
