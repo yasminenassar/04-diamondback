@@ -43,43 +43,36 @@ wellFormed (Prog ds e) = duplicateFunErrors ds
 -- | `wellFormedD fEnv vEnv d` returns the list of errors for a func-decl `d`
 --------------------------------------------------------------------------------
 wellFormedD :: FunEnv -> BareDecl -> [UserError]
-wellFormedD fEnv (Decl _ xs e _) = wellFormedE fEnv vEnv e -- ++ duplicate
+wellFormedD fEnv (Decl _ xs e _) = wellFormedE fEnv vEnv e  ++ duplicate
   where
     vEnv = addsEnv emptyEnv xs
-{-    duplicate = duplicateParamErrs dupParams
-    dupParams = repeated xs' 
-    xs'       = idify xs
--}
+    duplicate = duplicateParamErrs dupParams
+    dupParams = repeated xs ids 
+    ids       = idify xs
+
 
 addsEnv :: Env -> [Bind a] -> Env
 addsEnv env []     = env
 addsEnv env (x:xs) = addsEnv (addEnv x env) xs
 
-{- 
+
 idify :: [Bind a] -> [Id]
 idify [] = []
-idify (x:xs) = (bindId x) ++ idify xs
-                  
-
-duplicateParamErrs :: [Bind a] -> [UserError]
+idify (x:xs) = [bindId x] ++ idify xs
+                   
+duplicateParamErrs :: (Located (Bind a)) => [Bind a] -> [UserError]
 duplicateParamErrs [] = []
-duplicateParamErrs (x:xs) = [errDupParam x] ++ duplicateParamErrs xs
--}
- 
-repeated :: [Id] -> [Id]
-repeated l = nub' l []     
-  where
-    nub' [] ls           = ls
-    nub' (x:xs) ls    
-      | x `elem` ls   = nub' xs (x:ls)
-      | otherwise     = nub' xs ls -- = x : nub' xs (x:ls) -}
+duplicateParamErrs (x:xs) = ((errDupParam x):duplicateParamErrs xs)
 
-{- duplicateParams :: [Bind a] -> Located (Bind a) => [(Located (Bind a)) => Bind a]
-duplicateParams []     = []
-duplicateParams (x:xs) = if x `elem` xs then
-                           x:(duplicateParams xs)
-                         else
-                           duplicateParams xs -}
+ 
+repeated :: [Bind a] -> [Id] -> [Bind a]
+repeated binds ids = nub' binds ids []
+  where
+    nub' [] [] repeats = repeats
+    nub' (x:xs) (y:ys) ls
+      | y `elem` ys   = nub' xs ys (x:ls) -- if id y is repeated, add its bind to repeated list
+      | otherwise     = nub' xs ys ls -- if y was not repeated, recurse on the list
+
 --------------------------------------------------------------------------------
 -- | `wellFormedE vEnv e` returns the list of errors for an expression `e`
 --------------------------------------------------------------------------------
