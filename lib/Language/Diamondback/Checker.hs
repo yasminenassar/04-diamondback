@@ -43,13 +43,72 @@ wellFormed (Prog ds e) = duplicateFunErrors ds
 -- | `wellFormedD fEnv vEnv d` returns the list of errors for a func-decl `d`
 --------------------------------------------------------------------------------
 wellFormedD :: FunEnv -> BareDecl -> [UserError]
-wellFormedD fEnv (Decl _ xs e _) = error "TBD:wellFormedD"
+wellFormedD fEnv (Decl _ xs e _) = wellFormedE fEnv vEnv e -- ++ duplicate
+  where
+    vEnv = addsEnv emptyEnv xs
+{-    duplicate = duplicateParamErrs dupParams
+    dupParams = repeated xs' 
+    xs'       = idify xs
+-}
 
+addsEnv :: Env -> [Bind a] -> Env
+addsEnv env []     = env
+addsEnv env (x:xs) = addsEnv (addEnv x env) xs
+
+{- 
+idify :: [Bind a] -> [Id]
+idify [] = []
+idify (x:xs) = (bindId x) ++ idify xs
+                  
+
+duplicateParamErrs :: [Bind a] -> [UserError]
+duplicateParamErrs [] = []
+duplicateParamErrs (x:xs) = [errDupParam x] ++ duplicateParamErrs xs
+-}
+ 
+repeated :: [Id] -> [Id]
+repeated l = nub' l []     
+  where
+    nub' [] ls           = ls
+    nub' (x:xs) ls    
+      | x `elem` ls   = nub' xs (x:ls)
+      | otherwise     = nub' xs ls -- = x : nub' xs (x:ls) -}
+
+{- duplicateParams :: [Bind a] -> Located (Bind a) => [(Located (Bind a)) => Bind a]
+duplicateParams []     = []
+duplicateParams (x:xs) = if x `elem` xs then
+                           x:(duplicateParams xs)
+                         else
+                           duplicateParams xs -}
 --------------------------------------------------------------------------------
 -- | `wellFormedE vEnv e` returns the list of errors for an expression `e`
 --------------------------------------------------------------------------------
 wellFormedE :: FunEnv -> Env -> Bare -> [UserError]
-wellFormedE fEnv env e = error "TBD:wellFormedE"
+wellFormedE fEnv env e = go env e
+  where
+    gos vEnv es               = concatMap (go vEnv) es
+    go _    (Boolean {})      = []
+    go _    (Number  n     l) = overflow
+      where
+        overflow = if (n > maxInt) then
+                    [errLargeNum l n]
+                   else
+                     []
+    go vEnv (Id      x     l) = case (lookupEnv x vEnv) of
+                                  Just num -> []
+                                  Nothing  -> [errUnboundVar l x]
+    go vEnv (Prim1 _ e     _) = go  vEnv e
+    go vEnv (Prim2 _ e1 e2 _) = gos vEnv [e1, e2]
+    go vEnv (If   e1 e2 e3 _) = gos vEnv [e1, e2, e3]
+    go vEnv (Let x e1 e2   _) = go vEnv e1
+                             ++ shadowError
+                             ++ go (addEnv x vEnv) e2
+      where
+        shadowError          = case (lookupEnv (bindId x) vEnv) of
+                                  Nothing -> []
+                                  Just i  -> [errDupBind x] -- this let is redefining a variable already in scope
+    go vEnv (App f es      l) = unboundFunErrors fEnv f l es
+                             ++ gos vEnv es
 
 --------------------------------------------------------------------------------
 -- | Error Checkers: In each case, return an empty list if no errors.
@@ -59,6 +118,17 @@ duplicateFunErrors
   = fmap errDupFun
   . concat
   . dupBy (bindId . fName)
+
+-- fEnv, a map from function-names to the function-arity (number of params)
+-- this function handles arity and undefined function errors
+unboundFunErrors :: FunEnv -> Id -> SourceSpan -> [Expr a] -> [UserError]
+unboundFunErrors fEnv f l es = errors
+  where
+    args = length es -- number of parameters passed into function
+    errors = case (lookupEnv f fEnv) of -- expected number of params for this func 
+                Just arity -> if (arity == args) then [] 
+                              else [errCallArity l f] -- arity error
+                Nothing  -> [errUnboundFun l f] -- f wasn't found in fEnv - undefined func!
 
 -- | `maxInt` is the largest number you can represent with 31 bits (accounting for sign
 --    and the tag bit.
