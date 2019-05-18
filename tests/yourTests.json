@@ -1,5 +1,8 @@
 [
   {"name" : "error",
   "code" : "file",
-  "result" : {"failure" :"" }}
+  "result" : {"failure" :"" }},
+  {"name" : "tail",
+  "code" : "file",
+  "result" : {"value" :"" }}
 ]

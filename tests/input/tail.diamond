@@ -1,0 +1,13 @@
+def loop(r, i):
+  if (0 <= i):
+    let rr = r + i
+      , ii = i - 1
+    in
+      loop(rr, ii)
+  else:
+    r
+
+def sumTo(n):
+  loop(0, n)
+
+sumTo(10000)

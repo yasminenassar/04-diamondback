@@ -34,7 +34,10 @@ postlude = concat
   ]
 
 dynError   :: DynError -> [Instruction]
-dynError e = error "TBD:dynError"
+dynError e =  [ILabel (DynamicErr e),
+               IPush (Reg EAX),
+               IPush (Const (errorCode e)),
+               ICall (Builtin "error")]
 
 
 errorCode :: DynError -> Int

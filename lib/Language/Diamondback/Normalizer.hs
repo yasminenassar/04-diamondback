@@ -53,8 +53,20 @@ anf i (If c e1 e2 l)    = (i''', stitch bs  (If c' e1' e2' l))
     (i'' ,     e1')     = anf i'  e1
     (i''',     e2')     = anf i'' e2
 
-anf i (App f es l)      = error "TBD:anf:App"
-
+{- anf i (App f es l)            = anf' i es [] []
+  where
+    anf' i' [] es' bs         = (i', stitch bs (App f es' l))
+    anf' i' (x:xs) es' bs     = anf' i'' xs es'' bs''
+      where
+       (i'', bs', x')         = imm i' x
+       bs''                   = bs' ++ bs
+       es''                   = es' ++ [x']
+-}
+anf i (App f es l)            = (i', stitch bs (App f es' l))
+  where
+    (i', bs, es')             = imms i es
+    (i'', x)                  = fresh l i'
+    bs'                       = (x, (App f es' l, l)) : bs
 --------------------------------------------------------------------------------
 -- | `stitch bs e` takes a "context" `bs` which is a list of temp-vars and their
 --   definitions, and an expression `e` that uses the temp-vars in `bs` and glues
@@ -106,7 +118,11 @@ imm i (Prim2 o e1 e2 l) = (i'', bs', mkId x l)
     (i'', x)            = fresh l i'
     bs'                 = (x, (Prim2 o v1 v2 l, l)) : bs
 
-imm i (App f es l)      = error "TBD:imm:App"
+imm i (App f es l)      = (i'', bs', mkId x l)
+  where
+    (i', bs, es')       = imms i es
+    (i'', x)            = fresh l i'
+    bs'                 = (x, (App f es' l, l)) : bs
 
 imm i e@(If _ _ _  l)   = immExp i e l
 
